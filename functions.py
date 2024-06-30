@@ -181,14 +181,18 @@ def plot_decision_tree(clf, feature_names, title):
     plt.title(title)
     plt.show()
 
-def plot_metric_table(results, metric):
-    data = {
-        "Classifier": [res["name"] for res in results],
-        metric: [res[metric] for res in results]
-    }
+def plot_metric_table(original_results, smote_results, gan_results, metric):
+    data = []
+    for res in original_results:
+        data.append({"Classifier": res["name"], "Type": "Original", metric: res[metric]})
+    for res in smote_results:
+        data.append({"Classifier": res["name"], "Type": "SMOTE", metric: res[metric]})
+    for percent, results in gan_results:
+        for res in results:
+            data.append({"Classifier": res["name"], "Type": f"GAN {percent}%", metric: res[metric]})
     df = pd.DataFrame(data)
-    plt.figure(figsize=(8, 6))
-    sns.barplot(x="Classifier", y=metric, data=df)
+    plt.figure(figsize=(12, 8))
+    sns.barplot(x="Classifier", y=metric, hue="Type", data=df)
     plt.title(f'{metric.capitalize()} Scores of Different Classifiers')
     plt.ylim(0, 1.0)
     plt.show()
@@ -211,23 +215,44 @@ def plot_accuracy_comparison(results_all):
     plt.legend(title="Classifier")
     plt.show()
 
-def plot_combined_metrics_table(results_all):
+def plot_combined_metrics_table(original_results, smote_results, gan_results):
     combined_data = []
-    for percent, results in results_all:
+
+    for res in smote_results:
+        combined_data.append({
+            "Classifier": res["name"],
+            "Type": "SMOTE",
+            "Accuracy": res["accuracy"],
+            "Precision": res["precision"],
+            "Recall": res["recall"],
+            "F1 Score": res["f1"]
+        })
+    for res in original_results:
+        combined_data.append({
+            "Classifier": res["name"],
+            "Type": "Original",
+            "Accuracy": res["accuracy"],
+            "Precision": res["precision"],
+            "Recall": res["recall"],
+            "F1 Score": res["f1"]
+        })
+    for percent, results in gan_results:
         for res in results:
             combined_data.append({
                 "Classifier": res["name"],
-                "Percentage of GAN Data": percent,
+                "Type": f"GAN {percent}%",
                 "Accuracy": res["accuracy"],
                 "Precision": res["precision"],
                 "Recall": res["recall"],
                 "F1 Score": res["f1"]
             })
+
     df = pd.DataFrame(combined_data)
     plt.figure(figsize=(12, 8))
+
     metrics = ["Accuracy", "Precision", "Recall", "F1 Score"]
     for metric in metrics:
-        pivot_df = df.pivot(index="Classifier", columns="Percentage of GAN Data", values=metric)
+        pivot_df = df.pivot(index="Classifier", columns="Type", values=metric)
         sns.heatmap(pivot_df, annot=True, fmt=".2f", cmap="YlGnBu")
-        plt.title(f'{metric} Scores for Classifiers with Different GAN Data Percentages')
+        plt.title(f'{metric} Scores for Classifiers with Different Data Types')
         plt.show()
